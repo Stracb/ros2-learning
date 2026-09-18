@@ -1,0 +1,11 @@
+# ROS 2 编译产物（几百 MB，绝不能提交）
+build/
+install/
+log/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 编辑器
+.vscode/
