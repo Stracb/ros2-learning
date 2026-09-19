@@ -43,7 +43,7 @@ sudo apt install openssh-server
 Linux 里"改系统"的操作（装软件、改系统配置、动 `/opt` 里的文件）需要管理员权限。
 普通用户直接执行会被拒绝（`Permission denied`）。
 
-> ⚠️ **sudo 会要密码**。输入时**屏幕上不显示任何字符**（连星号都没有），这是正常的，
+>  **sudo 会要密码**。输入时**屏幕上不显示任何字符**（连星号都没有），这是正常的，
 > 盲打密码然后回车即可。
 
 ---
@@ -165,7 +165,7 @@ sudo systemctl enable --now ssh
 | `-n` | 显示行号 |
 | `-c` | 只输出匹配行数 |
 
-> ⚠️ 踩过的坑：`grep -r` **不跟随符号链接**，找不到 `ros2.sources` 就是这原因。
+>  踩过的坑：`grep -r` **不跟随符号链接**，找不到 `ros2.sources` 就是这原因。
 
 ---
 
@@ -216,7 +216,7 @@ source ~/.bashrc
 | `export` | 定义一个环境变量（对当前终端及其子进程有效）|
 | `source <文件>` | **在当前终端里执行这个文件** |
 
-### ⭐ `source` 是 ROS 2 的核心机制
+### `source` 是 ROS 2 的核心机制
 
 ```bash
 source /opt/ros/jazzy/setup.bash

@@ -34,7 +34,9 @@ setup(
             'turtle_control = my_turtle.turtle_control:main',
             'draw_square = my_turtle.draw_square:main',
             'move_client = my_turtle.move_client:main',
-
+            'rotate_client = my_turtle.rotate_client:main',
+            'my_rotate_server = my_turtle.my_rotate_server:main',
+            
         ],
     },
 )

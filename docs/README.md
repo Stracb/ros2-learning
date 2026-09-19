@@ -62,7 +62,7 @@
 | 内核 | `uname -r` | `7.0.0-31-generic` | ✅ |
 | 内存 | `free -h` | `11Gi` 总量，可用 10Gi | ✅ |
 | CPU | `nproc` | `8` | ✅ |
-| 磁盘 | `df -h /` | `/dev/nvme0n1p2` **40 GB**，可用 28 G | ⚠️ 实际设成 40 GB（原计划 80 GB），够用 |
+| 磁盘 | `df -h /` | `/dev/nvme0n1p2` **40 GB**，可用 28 G |  实际设成 40 GB（原计划 80 GB），够用 |
 | VMware Tools | `dpkg -l \| grep open-vm-tools` | `open-vm-tools` + `open-vm-tools-desktop` 均已安装 | ✅ |
 | 网络 | `ping baidu.com` | 0% 丢包，RTT 14 ms | ✅ |
 | **3D 加速** | `glxinfo -B` | **`SVGA3D; build: RELEASE; LLVM`**<br>OpenGL **4.3** (需 ≥3.3) | ✅✅ **关键闸门通过** |
@@ -78,7 +78,7 @@
 |---|---|---|---|
 | 安装 | `which gz` | `/opt/ros/jazzy/opt/gz_tools_vendor/bin/gz` | ✅ |
 | 版本 | `gz sim --versions` | **`8.11.0`**（gz-sim 8 = Harmonic）| ✅ 与 Jazzy 官方配对 |
-| GUI 启动 | `gz sim shapes.sdf` | 窗口弹出，但**持续频闪** | ⚠️ 见下方修复 |
+| GUI 启动 | `gz sim shapes.sdf` | 窗口弹出，但**持续频闪** |  见下方修复 |
 | 渲染引擎修复 | `--render-engine ogre` | **频闪消失** | ✅ 根因确认 |
 | 永久修复 | 改 `~/.gz/sim/8/gui.config` + `server.config` | **不带参数启动也不闪** | ✅ **已永久解决** |
 | ROS 2 桥接 | `ros2 launch ros_gz_sim gz_sim.launch.py gz_args:="shapes.sdf"`<br>`ros2 topic list` | ROS 2 侧出现 **`/clock`** | ✅ 桥接正常 |
@@ -91,11 +91,11 @@
 
 | 快照名 | 时间点 | 内容 | 状态 |
 |---|---|---|---|
-| `01-系统就绪` | 2026-09-11 | Ubuntu 24.04.5 + open-vm-tools + 3D 加速已验证 | 🗑️ 已删除 |
-| `02-ROS2就绪` | 2026-09-11 | ROS 2 Jazzy desktop 安装完成，talker/listener 通信验证通过 | 🗑️ 已删除 |
+| `01-系统就绪` | 2026-09-11 | Ubuntu 24.04.5 + open-vm-tools + 3D 加速已验证 | 🗑 已删除 |
+| `02-ROS2就绪` | 2026-09-11 | ROS 2 Jazzy desktop 安装完成，talker/listener 通信验证通过 | 🗑 已删除 |
 | **`03-仿真就绪`** | 2026-09-11 | ROS 2 Jazzy + Gazebo Harmonic(ogre引擎) + colcon + rqt 全部验证通过 | ✅ **唯一保留的回滚点** |
 
-> ⚠️ **重要习惯**：拍摄快照时**务必取消勾选「拍摄虚拟机内存」**。
+>  **重要习惯**：拍摄快照时**务必取消勾选「拍摄虚拟机内存」**。
 > 本机内存 12 GB，勾选后**每个快照占 12 GB**；不勾选只要几百 MB，
 > 代价仅是恢复后需要重新开机（20 秒）。3 个快照曾因此占用 37 GB。
 
@@ -151,7 +151,7 @@ sudo apt install -y ros-jazzy-desktop
 
 ---
 
-## ⚠️ 关键坑：Gazebo 在 VMware 里必须用 ogre 渲染引擎
+## 关键坑：Gazebo 在 VMware 里必须用 ogre 渲染引擎
 
 ### 症状
 
@@ -238,7 +238,7 @@ ROS 2 Humble 整个装在 `.vmdk` 内部，而 `.vmdk` 就是虚拟机的整块�
 
 **方式 2**：关闭虚拟机并**完全退出 VMware**（含托盘图标）→ 删除 `E:\Ubuntu-22.04.5\` 整个文件夹
 
-> ⚠️ **两个坑**：
+>  **两个坑**：
 > 1. 关机时**不要用「挂起 (Suspend)」** —— 挂起状态会保留 `.vmem`，删不干净。
 >    判断方法：文件夹里若有 `*.lck` 锁文件和 `*.vmem`，说明虚拟机正在运行或挂起中，无法删除。
 > 2. 28 GB 的文件**通常不进回收站**，是直接永久删除，操作前务必确认。
