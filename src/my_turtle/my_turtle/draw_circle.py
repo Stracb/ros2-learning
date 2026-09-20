@@ -71,34 +71,73 @@
 # if __name__ == '__main__':
 #     main()
 
+# import rclpy
+# from rclpy.node import Node
+# from geometry_msgs.msg import Twist
+
+# class TurtleCircler(Node):                    #← 类名 + 父类
+#     def __init__(self):                # ← 配置块的名字
+#         super().__init__('turtle_circler')            #  ← 调用父类 + 节点名
+
+#         self.publisher_ = self.create_publisher(
+#             Twist,                         #   ← 消息类型（类名）
+#             '/turtle1/cmd_vel',                         # ← 话题名（带引号）
+#             10                                # ← 队列长度
+#         )
+                         
+#         self.timer = self.create_timer(0.1, self.send_command)          #← 间隔秒数  # ← 回调函数名（不加括号！）
+
+#     def send_command(self):                # ← 干活块的名字
+#         msg = Twist()                     #    ← 造一条空消息
+#         msg.linear.x = 6.0                 #  ← 前进速度
+#         msg.angular.z = 1.0                  #← 转向速度
+#         self.publisher_.publish(msg)             # ← 发出去
+
+# def main():                           # ← 启动块的名字
+#     rclpy.init()                       #       ← 开机
+#     node = TurtleCircler()              #               ← 造对象
+#     rclpy.spin(node)                     #     ← 让它转
+#     node.destroy_node()                    #           ← 注销节点
+#     rclpy.shutdown()                       #       ← 断开 ROS 2
+
+# if __name__ == '__main__':
+#     main()
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 
-class TurtleCircler(Node):                    #← 类名 + 父类
-    def __init__(self):                # ← 配置块的名字
-        super().__init__('turtle_circler')            #  ← 调用父类 + 节点名
+class DrawCircle(Node):
+    def __init__(self):
+        super().__init__('draw_circle')
+
+        self.declare_parameter('linear_speed',6.0)
+        self.declare_parameter('angular_speed',3.0)
+
+        self.linear_speed = self.get_parameter('linear_speed').value
+        self.angular_speed = self.get_parameter('angular_speed').value
 
         self.publisher_ = self.create_publisher(
-            Twist,                         #   ← 消息类型（类名）
-            '/turtle1/cmd_vel',                         # ← 话题名（带引号）
-            10                                # ← 队列长度
+            Twist,
+            '/turtle1/cmd_vel',
+            10
         )
-                         
-        self.timer = self.create_timer(0.1, self.send_command)          #← 间隔秒数  # ← 回调函数名（不加括号！）
 
-    def send_command(self):                # ← 干活块的名字
-        msg = Twist()                     #    ← 造一条空消息
-        msg.linear.x = 6.0                 #  ← 前进速度
-        msg.angular.z = 1.0                  #← 转向速度
-        self.publisher_.publish(msg)             # ← 发出去
+        self.timer_ = self.create_timer(0.1,self.operation)
 
-def main():                           # ← 启动块的名字
-    rclpy.init()                       #       ← 开机
-    node = TurtleCircler()              #               ← 造对象
-    rclpy.spin(node)                     #     ← 让它转
-    node.destroy.node()                    #           ← 注销节点
-    rclpy.shutdown()                       #       ← 断开 ROS 2
+
+    def operation(self):
+        msg = Twist()
+        msg.linear.x = self.linear_speed
+        msg.angular.z = self.angular_speed
+        self.publisher_.publish(msg)
+
+def main():
+    rclpy.init()
+    node = DrawCircle()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
