@@ -38,6 +38,7 @@ setup(
             'move_client = my_turtle.move_client:main',
             'rotate_client = my_turtle.rotate_client:main',
             'my_rotate_server = my_turtle.my_rotate_server:main',
+            'status_bridge = my_turtle.status_bridge:main',
             
         ],
     },
