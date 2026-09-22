@@ -268,26 +268,33 @@ echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
 ---
 
-## 十、ROS 2 常用组合
+## 十、把 Linux 命令用在 ROS 场景
+
+> **这一节只留"Linux 命令 + ROS 场景"的组合。**
+> **纯 ROS 2 命令**（`ros2 pkg list`、`ros2 pkg prefix`、`ros2 pkg executables`、
+> `ros2 topic list`…）请查 **`06-ROS2命令速查.md`**。
+>
+> **分工**：`03` = **Linux 命令**；`06` = **ROS 2 命令**。别在两份文件里互相找。
 
 ```bash
-# 查看 ROS 版本
-echo $ROS_DISTRO
-
-# 列出所有包
-ros2 pkg list
-
-# 找某个包装在哪
-ros2 pkg prefix turtlesim
-
-# 看某个包提供哪些程序
-ros2 pkg executables turtlesim
-
 # 找 ROS 相关进程
+#   ps aux = 列出所有进程；| grep ros = 从中筛出含 "ros" 的行
 ps aux | grep ros
 
 # 强杀卡住的 Gazebo
+#   pkill = 按名字杀进程；-f = 匹配"整条命令行"（不只是进程名）
 pkill -f "gz sim"
+
+# 看某个命令装在哪
+#   which = 查这个可执行文件在哪个目录
+which ros2
+
+# 查某个 ROS 包有没有装（deb 包）
+#   dpkg -l = 列出已安装的软件包
+dpkg -l | grep ros-jazzy
+
+# 看工作空间里有哪些包（纯 Linux 视角：找 package.xml）
+find ~/ros2_ws/src -name package.xml
 ```
 
 ---

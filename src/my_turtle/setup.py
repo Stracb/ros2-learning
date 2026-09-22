@@ -39,6 +39,7 @@ setup(
             'rotate_client = my_turtle.rotate_client:main',
             'my_rotate_server = my_turtle.my_rotate_server:main',
             'status_bridge = my_turtle.status_bridge:main',
+            'draw_polygon = my_turtle.draw_polygon:main',
             
         ],
     },
