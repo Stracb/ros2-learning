@@ -12,8 +12,10 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/config', ['config/square_params.yaml']),
         ('share/' + package_name + '/config', ['config/circle_params.yaml']),
+        ('share/' + package_name + '/config', ['config/polygon_params.yaml']),
         ('share/' + package_name + '/launch', ['launch/square_demo.launch.py']),
         ('share/' + package_name + '/launch', ['launch/circle_demo.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/polygon_demo.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -40,6 +42,7 @@ setup(
             'my_rotate_server = my_turtle.my_rotate_server:main',
             'status_bridge = my_turtle.status_bridge:main',
             'draw_polygon = my_turtle.draw_polygon:main',
+            'move_to_server = my_turtle.move_to_server:main',
             
         ],
     },

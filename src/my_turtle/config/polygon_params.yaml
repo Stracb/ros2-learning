@@ -1,0 +1,4 @@
+draw_polygon:
+  ros__parameters:
+    forward_speed: 2.0
+    turn_speed: 0.3

@@ -30,7 +30,8 @@ endif()
 # ② 告诉它：要把哪些 .msg 变成代码
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TurtleStatus.msg"
-  "srv/DrawPolygon.srv"  
+  "srv/DrawPolygon.srv"
+  "action/MoveTo.action"
 )
 
 # ③ 让别的包能用上生成的接口

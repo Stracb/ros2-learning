@@ -87,7 +87,7 @@ class PolygonDrawer(Node):
         self.publisher_.publish(cmd)
 
     def reset_state(self):
-        """把状态机退回初始状态（__init__ 和 服务回调 都调它）"""
+        """把状态机退回初始状态(__init__ 和 服务回调 都调它）"""
         self.cnt = 0
         self.start_x = None
         self.start_y = None
