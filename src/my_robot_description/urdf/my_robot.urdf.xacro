@@ -1,12 +1,22 @@
 <?xml version="1.0"?>
 <robot name="my_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+  <xacro:property name="wheel_radius" value="0.1"/>
+  <xacro:property name="wheel_width" value="0.04"/>
+  <xacro:property name="wheel_offset_y" value="0.2"/>
+  <xacro:property name="wheel_offset_z" value="${-base_height/2}"/>
+  <xacro:property name="base_length" value="0.6"/>
+  <xacro:property name="base_width" value="0.4"/>
+  <xacro:property name="base_height" value="0.2"/>
+  <xacro:property name="caster_radius" value="0.03"/>
+
+
   <link name="base_link">
 
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <box size="3 3 3"/>
+        <box size="${base_length} ${base_width} ${base_height}"/>
       </geometry>
       <material name="blue">
         <color rgba="0.2 0.4 0.9 1.0"/>
@@ -16,7 +26,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <box size="3 3 3"/>
+        <box size="0.6 0.4 0.2"/>
       </geometry>
     </collision>
 
@@ -27,5 +37,84 @@
     </inertial>
 
   </link>
+
+
+  <xacro:macro name="caster" params="caster_name x_offset">
+
+    <link name="caster_${caster_name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+        <material name="gray">
+          <color rgba="0.5 0.5 0.5 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.1"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <joint name="caster_${caster_name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child  link="caster_${caster_name}"/>
+      <origin xyz="${x_offset} 0 ${wheel_offset_z}" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+  <xacro:caster caster_name="front" x_offset="0.25"/>
+  <xacro:caster caster_name="back"  x_offset="-0.25"/>
+
+
+  <xacro:macro name="wheel" params="wheel_name y_offset">
+
+    <link name="wheel_${wheel_name}">
+
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+      </inertial>
+
+    </link>
+
+    <joint name="wheel_${wheel_name}_joint" type="continuous">
+      <parent link="base_link"/>
+      <child  link="wheel_${wheel_name}"/>
+      <origin xyz="0 ${y_offset} ${wheel_offset_z}" rpy="1.5708 0 0"/>
+      <axis xyz="0 0 1"/>
+    </joint>
+
+  </xacro:macro>
+
+  <xacro:wheel wheel_name="left"  y_offset="${wheel_offset_y}"/>
+  <xacro:wheel wheel_name="right" y_offset="${-wheel_offset_y}"/>
 
 </robot>
