@@ -114,6 +114,8 @@ sudo apt install -y ros-jazzy-desktop
 | `dpkg -l <包名>` | **查询某个包装没装** |
 | `apt list --installed` | 列出所有已装包 |
 
+> **ROS 2 场景**：查某个 ROS 包有没有装 —— `dpkg -l | grep ros-jazzy`。
+
 > **常见困惑**：`update` 和 `upgrade` 完全不是一回事。
 > `update` 只是去网上拿最新的"软件目录"，`upgrade` 才是真的升级。
 
@@ -145,14 +147,17 @@ sudo systemctl enable --now ssh
 
 ## 六、查找与过滤
 
-| 命令 | 作用 | 例子 |
-|---|---|---|
-| `which <命令>` | 命令的可执行文件在哪 | `which ros2` |
-| `grep <关键词> <文件>` | 在文件里搜关键词 | `grep depend package.xml` |
-| `find <目录> -name <名字>` | 按名字找文件 | `find /opt -name "*.msg"` |
-| `hostname -I` | 查看本机 IP 地址 | `hostname -I` |
-| `ps aux` | 列出所有进程 | `ps aux \| grep ros` |
-| `pkill -f <关键词>` | 按关键词杀进程 | `pkill -f "gz sim"` |
+| 命令 | 作用 | 例子 | 用在 ROS 2 场景 |
+|---|---|---|---|
+| `which <命令>` | 命令的可执行文件在哪 | `which ros2` | 看某个命令装在哪 |
+| `grep <关键词> <文件>` | 在文件里搜关键词 | `grep depend package.xml` | 在 `package.xml` 里搜依赖 |
+| `find <目录> -name <名字>` | 按名字找文件 | `find /opt -name "*.msg"` | `find ~/ros2_ws/src -name package.xml` 看工作空间里有哪些包 |
+| `hostname -I` | 查看本机 IP 地址 | `hostname -I` | — |
+| `ps aux` | 列出所有进程 | `ps aux \| grep ros` | **找 ROS 相关进程**：`ps aux \| grep ros` |
+| `pkill -f <关键词>` | 按关键词杀进程 | `pkill -f "gz sim"` | **强杀卡住的 Gazebo**：`pkill -f "gz sim"`（`-f` = 匹配"整条命令行"，不只是进程名）|
+
+> **分工**：`03` = **Linux 命令**；`06` = **ROS 2 命令**
+> （`ros2 pkg list`、`ros2 topic list`…）。别在两份文件里互相找。
 
 ### `grep` 常用选项
 
@@ -268,38 +273,7 @@ echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
 ---
 
-## 十、把 Linux 命令用在 ROS 场景
-
-> **这一节只留"Linux 命令 + ROS 场景"的组合。**
-> **纯 ROS 2 命令**（`ros2 pkg list`、`ros2 pkg prefix`、`ros2 pkg executables`、
-> `ros2 topic list`…）请查 **`06-ROS2命令速查.md`**。
->
-> **分工**：`03` = **Linux 命令**；`06` = **ROS 2 命令**。别在两份文件里互相找。
-
-```bash
-# 找 ROS 相关进程
-#   ps aux = 列出所有进程；| grep ros = 从中筛出含 "ros" 的行
-ps aux | grep ros
-
-# 强杀卡住的 Gazebo
-#   pkill = 按名字杀进程；-f = 匹配"整条命令行"（不只是进程名）
-pkill -f "gz sim"
-
-# 看某个命令装在哪
-#   which = 查这个可执行文件在哪个目录
-which ros2
-
-# 查某个 ROS 包有没有装（deb 包）
-#   dpkg -l = 列出已安装的软件包
-dpkg -l | grep ros-jazzy
-
-# 看工作空间里有哪些包（纯 Linux 视角：找 package.xml）
-find ~/ros2_ws/src -name package.xml
-```
-
----
-
-## 十一、遇到问题时
+## 十、遇到问题时
 
 | 想知道 | 命令 |
 |---|---|
