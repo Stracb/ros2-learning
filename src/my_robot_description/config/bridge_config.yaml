@@ -1,0 +1,22 @@
+# ROS 2 ←→ Gazebo 话题桥接清单
+#
+# 每一项是一个桥接规则，四条信息：
+#   ros_topic_name : ROS 2 侧的话题名
+#   gz_topic_name  : Gazebo 侧的话题名
+#   ros_type_name  : ROS 2 侧的消息类型
+#   gz_type_name   : Gazebo 侧的消息类型
+#   direction      : 方向 —— ROS_TO_GZ / GZ_TO_ROS / BIDIRECTIONAL
+
+# ① 速度指令：ROS 2 发 → Gazebo 收（驱动轮子）
+- ros_topic_name: "/cmd_vel"
+  gz_topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  gz_type_name: "gz.msgs.Twist"
+  direction: ROS_TO_GZ
+
+# ② 里程计：Gazebo 发 → ROS 2 收（回传"我走到哪了"）
+- ros_topic_name: "/odom"
+  gz_topic_name: "/odom"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  gz_type_name: "gz.msgs.Odometry"
+  direction: GZ_TO_ROS

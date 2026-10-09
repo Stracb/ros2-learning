@@ -16,6 +16,18 @@
   <xacro:property name="camera_size_z" value="0.08"/>
 
 
+    <!-- ① 摩擦（放前面，方便对照上面刚定义的轮子）-->
+  <gazebo reference="wheel_left">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <gazebo reference="wheel_right">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+
   <link name="base_link">
 
     <visual>
@@ -191,5 +203,23 @@
 
   <xacro:wheel wheel_name="left"  y_offset="${wheel_offset_y}"/>
   <xacro:wheel wheel_name="right" y_offset="${-wheel_offset_y}"/>
+
+
+    <!-- ══════════ Gazebo 差速驱动 ══════════ -->
+  <gazebo>
+    <plugin filename="gz-sim-diff-drive-system"
+            name="gz::sim::systems::DiffDrive">
+      <left_joint>wheel_left_joint</left_joint>
+      <right_joint>wheel_right_joint</right_joint>
+      <wheel_separation>${wheel_offset_y * 2}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_link</child_frame_id>
+      <max_linear_acceleration>1.0</max_linear_acceleration>
+    </plugin>
+  </gazebo>
 
 </robot>
