@@ -30,6 +30,40 @@
 # if __name__ == '__main__':
 #     main()
 
+# import rclpy
+# from rclpy.node import Node
+# from std_srvs.srv import Trigger
+
+# class Greeter(Node):
+#     def __init__(self):
+#         super().__init__('greeter')
+
+#         self.srv = self.create_service(
+#             Trigger,
+#             'say_hello',
+#             self.operation
+#         )
+
+#     def operation(self, request, response):
+#         response.success = True
+#         response.message = '但愿我会让你感到骄傲'
+#         return response
+
+# def main():
+#     rclpy.init()
+#     node = Greeter()
+#     try:
+#         rclpy.spin(node)
+#     except KeyboardInterrupt:
+#         pass
+#     finally:
+#         node.destroy_node()
+#         rclpy.shutdown()
+
+# if __name__ == '__main__':
+#     main()
+
+
 import rclpy
 from rclpy.node import Node
 from std_srvs.srv import Trigger
@@ -38,15 +72,15 @@ class Greeter(Node):
     def __init__(self):
         super().__init__('greeter')
 
-        self.srv = self.create_service(
+        self.service_ = self.create_service(
             Trigger,
             'say_hello',
             self.operation
         )
 
-    def operation(self, request, response):
+    def operation(self,request,response):
         response.success = True
-        response.message = '但愿我会让你感到骄傲'
+        response.message = '但愿我没有让你失望'
         return response
 
 def main():
@@ -62,5 +96,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    

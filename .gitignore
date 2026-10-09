@@ -9,3 +9,7 @@ __pycache__/
 
 # 编辑器
 .vscode/
+# 个人文档（与 ROS 学习无关，不进仓库）
+docs/00-接续说明.md
+docs/09-实习目标与岗位要求.md
+docs/_整改清单.md
