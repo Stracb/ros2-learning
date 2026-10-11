@@ -14,6 +14,7 @@
   <xacro:property name="camera_size_x" value="0.02"/>
   <xacro:property name="camera_size_y" value="0.08"/>
   <xacro:property name="camera_size_z" value="0.08"/>
+  <xacro:property name="caster_offset_z" value="${wheel_offset_z - wheel_radius + caster_radius}"/>
 
 
     <!-- ① 摩擦（放前面，方便对照上面刚定义的轮子）-->
@@ -84,7 +85,7 @@
     <joint name="caster_${caster_name}_joint" type="fixed">
       <parent link="base_link"/>
       <child  link="caster_${caster_name}"/>
-      <origin xyz="${x_offset} 0 ${wheel_offset_z}" rpy="0 0 0"/>
+      <origin xyz="${x_offset} 0 ${caster_offset_z}" rpy="0 0 0"/>
     </joint>
 
   </xacro:macro>
@@ -130,6 +131,9 @@
     </joint>
 
   </xacro:macro>
+
+  <xacro:wheel wheel_name="left"  y_offset="${wheel_offset_y}"/>
+  <xacro:wheel wheel_name="right" y_offset="${-wheel_offset_y}"/>
 
 
   <link name="laser_link">
@@ -200,12 +204,7 @@
   </joint>
 
 
-
-  <xacro:wheel wheel_name="left"  y_offset="${wheel_offset_y}"/>
-  <xacro:wheel wheel_name="right" y_offset="${-wheel_offset_y}"/>
-
-
-    <!-- ══════════ Gazebo 差速驱动 ══════════ -->
+    <!-- ══════════ Gazebo 差速驱动（插件） ══════════ -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system"
             name="gz::sim::systems::DiffDrive">
@@ -219,6 +218,48 @@
       <frame_id>odom</frame_id>
       <child_frame_id>base_link</child_frame_id>
       <max_linear_acceleration>1.0</max_linear_acceleration>
+    </plugin>
+  </gazebo>
+
+
+    <!-- ══════════ 激光雷达传感器 ══════════ -->
+  <gazebo reference="base_link">
+    <sensor name="laser" type="gpu_lidar">
+      <gz_frame_id>laser_link</gz_frame_id>
+      <pose>0 0 0.5 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <topic>scan</topic>
+      <always_on>1</always_on>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.1</min>
+          <max>20.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
     </plugin>
   </gazebo>
 
