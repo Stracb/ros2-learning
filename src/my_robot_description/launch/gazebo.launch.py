@@ -18,6 +18,8 @@ def generate_launch_description():
     # ② bridge 配置文件路径
     bridge_config = os.path.join(pkg_share, 'config', 'bridge_config.yaml')
 
+    world_file = os.path.join(pkg_share, 'worlds', 'my_world.sdf')
+
     # ③ 起 Gazebo（复用 ros_gz_sim 自带的 launch 文件）
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -25,7 +27,7 @@ def generate_launch_description():
                          'launch', 'gz_sim.launch.py')
         ),
         launch_arguments={
-            'gz_args': '-r empty.sdf'
+            'gz_args': '--render-engine-gui ogre --render-engine-server ogre2 -r ' + world_file
         }.items(),
     )
 
