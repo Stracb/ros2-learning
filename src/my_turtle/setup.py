@@ -43,6 +43,8 @@ setup(
             'status_bridge = my_turtle.status_bridge:main',
             'draw_polygon = my_turtle.draw_polygon:main',
             'move_to_server = my_turtle.move_to_server:main',
+            'autoforward = my_turtle.autoforward:main',
+            
             
         ],
     },
