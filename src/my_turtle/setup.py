@@ -44,7 +44,8 @@ setup(
             'draw_polygon = my_turtle.draw_polygon:main',
             'move_to_server = my_turtle.move_to_server:main',
             'autoforward = my_turtle.autoforward:main',
-            
+            'tf_lookup = my_turtle.tf_lookup:main',
+                        
             
         ],
     },

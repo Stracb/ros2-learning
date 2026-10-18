@@ -23,7 +23,7 @@
 ## 快速查找（先看这里）
 
 **引用写法**：本篇与别篇互相引用一律用「文件名 §编号」或「文件名 坑 N」
-（如 `06 §3.11`、`08 坑 73`），**不用 markdown 锚点** —— 锚点依赖标题文字，标题一改就断链。
+（如 `06 §3.12`、`08 坑 73`），**不用 markdown 锚点** —— 锚点依赖标题文字，标题一改就断链。
 
 | 我想知道… | 去哪 |
 |---|---|
@@ -60,7 +60,7 @@
 | **9** | **世界文件放进包** | `worlds/xxx.sdf` + CMake `install(DIRECTORY ...)` + `get_package_share_directory` |
 
 > **命令怎么敲一律看 `06-ROS2命令速查.md`**（本篇只写"文件怎么写"）——
-> 编译 `06 §2.5`、Gazebo / `gz` 命令 `06 §3.11`。
+> 编译 `06 §2.5`、Gazebo / `gz` 命令 `06 §3.12`。
 >
 > **本工程的实际文件**：`~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro`
 > —— **7 link / 6 joint，10 个 property，2 个宏（`wheel` / `caster`）**，
@@ -478,7 +478,7 @@ def generate_launch_description():
 - **改完 `worlds/` 里的文件要重编**（CMake 包的资源是"拷贝"进 `install/` 的）→ `06 §2.5`。
 
 > **完整因果链见 `08-踩坑总集.md` 坑 78 / 79 / 76。**
-> **"世界文件怎么起、怎么验证"的命令见 `06-ROS2命令速查.md` §3.11。**
+> **"世界文件怎么起、怎么验证"的命令见 `06-ROS2命令速查.md` §3.12。**
 
 ---
 
@@ -579,7 +579,7 @@ gz sdf -p ~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro
 
 > **`gz sdf -p` 会把 URDF / xacro 转成 SDF 打出来** ——
 > **它就是"Gazebo 真正看到的东西"**，还能顺便看到 `frame_id` 变成了什么（坑 73）。
-> **命令的完整说明见 `06-ROS2命令速查.md` §3.11。**
+> **命令的完整说明见 `06-ROS2命令速查.md` §3.12。**
 
 ---
 
@@ -662,9 +662,9 @@ gz sim --render-engine-gui ogre --render-engine-server ogre2 $WORLDS/gpu_lidar_s
 | **4** | `ros2 run tf2_tools view_frames` | **关节的 TF 有没有发出来**（可动关节没 TF 就是**坑 70**）|
 | **5** | `gz model --list` | **Gazebo 里到底有没有这台车**（★ 验证事实的硬手段）|
 
-> **仿真命令怎么敲**（起 Gazebo / 桥接 / `create` / `gz` 系列）→ `06-ROS2命令速查.md` §3.11。
+> **仿真命令怎么敲**（起 Gazebo / 桥接 / `create` / `gz` 系列）→ `06-ROS2命令速查.md` §3.12。
 > **`view_frames` 怎么读**（`rate: 10000` + `most_recent_transform: 0` = 静态变换）→ `04` 第一节第 25 天成果。
-> **每次实验前先清残留进程** → `06 §3.11` 末尾 + `08` 坑 80。
+> **每次实验前先清残留进程** → `06 §3.12` 末尾 + `08` 坑 80。
 
 > ⚠️ **改了 URDF 之后，"上一次的结果"还在原地**：
 > `robot_state_publisher` 只在启动时读一次 URDF；Gazebo 里那台车也是旧的
