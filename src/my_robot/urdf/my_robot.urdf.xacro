@@ -263,4 +263,30 @@
     </plugin>
   </gazebo>
 
+    <!-- ══════════ ros2_control（第 30 天的状态，先只声明）══════════ -->
+  <ros2_control name="GazeboSimSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="wheel_left_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="wheel_right_joint">
+      <command_interface name="velocity"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <ros>
+        <namespace></namespace>
+      </ros>
+      <parameters>$(find my_robot)/config/ros2_control.yaml</parameters>   
+    </plugin>
+  </gazebo>
+
 </robot>
