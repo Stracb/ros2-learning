@@ -13,3 +13,8 @@ __pycache__/
 docs/00-接续说明.md
 docs/09-实习目标与岗位要求.md
 docs/_整改清单.md
+# 录包与地图产物（本地产物，不进仓库）
+bag_*/
+*.mcap
+*.db3
+my_map*
