@@ -51,7 +51,7 @@ def generate_launch_description():
         package='ros_gz_sim',
         executable='create',
         arguments=['-topic', 'robot_description',
-                   '-name', 'my_robot', '-z', '0.5'],
+                   '-name', 'my_robot', '-z', '0.21'],
     )
 
     # ⑥ 桥接（/clock 和 /scan）

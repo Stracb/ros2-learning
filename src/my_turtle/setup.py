@@ -45,6 +45,7 @@ setup(
             'move_to_server = my_turtle.move_to_server:main',
             'autoforward = my_turtle.autoforward:main',
             'tf_lookup = my_turtle.tf_lookup:main',
+            'cmd_vel_relay = my_turtle.cmd_vel_relay:main',
                         
             
         ],

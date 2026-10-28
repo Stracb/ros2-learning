@@ -372,6 +372,7 @@
 | 4 | **`<sensor>` 只能写一处** | **同时**写进【世界文件】和【URDF】→ 段错误崩溃（坑 77）|
 | 5 | **GPU 传感器在虚拟机里要软渲染兜底** | 用 `gpu_lidar` / 相机前先 `export LIBGL_ALWAYS_SOFTWARE=1`，否则**一半扫描是空的、2 米内固定盲区**（**坑 81**）|
 | 6 | **换成别的传感器只改两处** | 改 `type`（`gpu_lidar` / `camera` / `imu`…）+ 换插件块 —— **怎么查写法见第四部分** |
+| 7 | **噪声写在 `<lidar>` 里面** | **`<sensor>` → `<lidar>` → `<noise>`**。写在 `<sensor>` 下会被 SDF **静默丢弃**，只留一条警告（**坑 94**）。`<mean>0.0</mean>` + `<stddev>0.01</stddev>`（= 1 厘米）|
 
 ### 坑：**固定关节会被合并进父 link**
 
@@ -383,9 +384,45 @@
 - **`<gazebo reference="laser_link">` 上的东西不一定会按你想象生效**（那个 link 已经不存在了）。
 - **结论**：**帧名字一律用 `<gz_frame_id>` 显式指定**，别指望它自动跟着 URDF 的 link 名走。
 
-### ⚠️ 本机的一个真实隐患：**帧名对了，但【位置】没对上**
+### 噪声：`<noise>` 的位置和写法（第 32 天）
 
-**本机的 URDF 实际是这样写的**：
+**位置**：`<sensor>` → **`<lidar>`** → `<noise>`。**写在 `<sensor>` 下面会被丢掉。**
+
+```xml
+<lidar>
+  <scan> ... </scan>
+  <range> ... </range>
+  <noise>
+    <type>gaussian</type>
+    <mean>0.0</mean>
+    <stddev>0.01</stddev>      <!-- 0.01 m = 1 厘米抖动 -->
+  </noise>
+</lidar>
+```
+
+| 字段 | 含义 |
+|---|---|
+| `<type>gaussian</type>` | 高斯噪声（也有 `uniform`）|
+| `<mean>` | 平均值，**填 0**（否则整体偏置，等于把墙挪走了）|
+| `<stddev>` | **抖动幅度**（米）。0.01 = 1 厘米 |
+
+**验证（不能省）**：
+
+```bash
+gz model -m <模型名> -l | grep -A10 "Noise"
+```
+
+看 `Standard deviation` 是不是你设的值 —— **是 0 就说明噪声没进去**。
+
+> **为什么要加噪声**：仿真里数据太完美，算法"看起来很稳"；真机上数据会抖，
+> 阈值判定就会**反复触发**（抖振 chattering）。**解法**：滞回（两个阈值）或**多帧确认**。
+> 详见 `02` 阶段七的验收原话 + `08` 坑 94。
+
+---
+
+### ⚠️ 本机的一个真实隐患（**第 32 天已修**）：帧名对了，但【位置】没对上
+
+**本机的 URDF 当时是这样写的**：
 
 | 项 | 值 |
 |---|---|
@@ -395,6 +432,9 @@
 | **而 `laser_link` 的关节位置** | **`z = 0.12`**（第 27 天用 `tf2_echo odom laser_link` 实测过）|
 
 > ## **⟹ TF 说"雷达在 0.12 米高处"，而它实际在 0.5 米高处 —— 差了 0.38 米。**
+
+> ## **✅ 第 32 天已修**：`<pose>` 改成 **`0 0 ${base_height/2 + laser_height/2} 0 0 0`** ——
+> ## **两处用【同一个 xacro 表达式】算出来，不再各写各的数字**（写死数字 = 迟早对不上）。
 
 **后果**：
 - **RViz 里激光点云的位置会整体偏高**（看不出来，但量一下就不对）
@@ -408,7 +448,20 @@
 | **B** | **把 `laser_link` 的关节 `z` 改成 `0.5`** —— 让 `laser_link` 跟着传感器走 |
 
 > **这不是"必须马上改"的 bug** —— **它不影响"车能跑、雷达有数据"** ✅
-> **但它是个【真错误】，越早对齐越省事**（等到建图时才发现，会很难查）。
+> **但它是个【真错误】**：等到建图时才发现，会表现为**墙的位置整体平移**，极难查。
+>
+> **本机选的是 A 的变体**：不是写死 `0.12`，而是让两处**都从同一组 xacro 参数算**：
+
+```xml
+<xacro:property name="base_height" value="0.2"/>
+<xacro:property name="laser_height" value="0.12"/>
+<!-- 传感器 -->
+<pose>0 0 ${base_height/2 + laser_height/2} 0 0 0</pose>
+<!-- laser_link 的关节 -->
+<origin xyz="0 0 ${base_height/2 + laser_height/2}" rpy="0 0 0"/>
+```
+
+> ## **⟹ 判据：两处数字要么【同一个表达式】，要么【根本不写数字】。** ✅
 
 > **完整因果链见 `08-踩坑总集.md` 坑 72 / 73 / 77。**
 > **"改了没生效 / 数据不对"的现象排查见 `10-原理与排查方法.md` §4.4（坐标系 / TF）与 §4.5（模型行为）。**
@@ -548,9 +601,20 @@ def generate_launch_description():
 ② 在官方示例目录里搜        ls /opt/ros/jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/worlds/ | grep -i lidar
 ③ 打开那个 .sdf 看完整写法   cat .../worlds/gpu_lidar_sensor.sdf
 ④ 抄 <sensor> 和 <plugin> 两块结构，改参数
-⑤ 验证转换对不对            gz sdf -p 你的模型.urdf.xacro
+⑤ 验证转换对不对            xacro 模型.urdf.xacro > /tmp/a.urdf && gz sdf -p /tmp/a.urdf
 ⑥ 跑起来看数据              ros2 topic echo /scan --once
 ```
+
+> ### ⚠️ `gz sdf` / `check_urdf` **只认【纯 URDF】，不认 `.xacro`**
+>
+> **直接喂 `.xacro` 会报一堆 `Unable to parse component [${base_length}]`**（第 30 天实测）
+> —— **因为工具读到的还是 `${...}` 变量，没人替换它们** ✅
+>
+> **所以永远分两步**：
+> ```bash
+> xacro urdf/my_robot.urdf.xacro > /tmp/my_robot.urdf     # ① 展开成纯 URDF
+> gz sdf -p /tmp/my_robot.urdf                            # ② 再喂给工具
+> ```
 
 > **②③ 里的路径是"本机这份安装"的位置** ——
 > **换机器 / 换版本可能不同，先用 `ls` 摸一下实际路径**（找 `gz-sim*` 那一层）。
@@ -574,12 +638,17 @@ ls /opt/ros/jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/worlds/ | grep -i lidar
 cat /opt/ros/jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/worlds/gpu_lidar_sensor.sdf
 
 # ③ 你自己的模型到底被转换成了什么（★ 最有用的一条）
-gz sdf -p ~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro
+#    ⚠️ 先展开！gz sdf 不认 .xacro
+xacro ~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro > /tmp/my_robot.urdf
+gz sdf -p /tmp/my_robot.urdf
 ```
 
-> **`gz sdf -p` 会把 URDF / xacro 转成 SDF 打出来** ——
+> **`gz sdf -p` 会把【纯 URDF】转成 SDF 打出来** ——
 > **它就是"Gazebo 真正看到的东西"**，还能顺便看到 `frame_id` 变成了什么（坑 73）。
+> **⚠️ 它不认 `.xacro`** —— 直接喂会报 `Unable to parse component [${...}]`（第 30 天实测）。
 > **命令的完整说明见 `06-ROS2命令速查.md` §3.12。**
+> **⚠️ 注意**：**`<ros2_control>` 块在 SDF 里【看不到】是正常的** —— 它是 URDF 扩展标签，
+> **`gz_ros2_control` 直接读 URDF，不经过 SDF** ✅
 
 ---
 
@@ -685,6 +754,7 @@ gz sim --render-engine-gui ogre --render-engine-server ogre2 $WORLDS/gpu_lidar_s
 | `Scene already exists with name: scene` + **段错误**（`Sensors` 插件写了两遍）| `08` **坑 77** |
 | 重启后 `Unable to find or download file`（世界文件放在 `/tmp` 或包外）| `08` **坑 78** |
 | `create` 在运行中放进去的**障碍物，雷达看不见** | `08` **坑 79** |
+| 噪声加了却**没效果**（数据仍完美平滑、`Standard deviation` 是 0）| `08` **坑 94**（`<noise>` 要写进 `<lidar>`）|
 
 > **一个能扩展到使用层的补充**：`gpu_lidar` 在虚拟机上半瞎（坑 81）——
 > **`export LIBGL_ALWAYS_SOFTWARE=1` 是跑传感器实验前的固定动作。**
