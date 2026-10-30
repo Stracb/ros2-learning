@@ -4,7 +4,8 @@
 
 环境是 Ubuntu 24.04 + ROS 2 Jazzy + Gazebo Harmonic，跑在 VMware 虚拟机里（宿主机 Windows 11）。
 
-**现在学到第 30 天**：阶段一到阶段六已经通关（含 TF2 坐标变换 + RViz），正在学阶段七（传感器仿真 + `ros2_control`）。
+**现在学到第 40 天**：**阶段 0–8 已全部通关**（环境 / 包 / rclpy / 接口 / URDF / Gazebo / TF2 / `ros2_control` / **SLAM 建图 4-4**）；
+**阶段九（Nav2 自主导航）进行中** —— 已经能做到"一条命令起全套 + 车自己走到目标点"。
 
 > 想知道"现在到哪儿了、下一步做什么"，看 **[04-学习进度存档.md](04-学习进度存档.md) 第一节**。
 > 那份是唯一权威，每次会话都会更新；本文件只是首页。
@@ -22,9 +23,11 @@
 | [05-写节点清单.md](05-写节点清单.md) | 写节点时照着做 —— 8 步流程 + 形状模板全表 |
 | [06-ROS2命令速查.md](06-ROS2命令速查.md) | 命令参考：项目全流程、各类命令、报错对照 |
 | [07-draw_square代码解析.md](07-draw_square代码解析.md) | 一个闭环控制程序的完整结构解析（历史快照）|
-| [08-踩坑总集.md](08-踩坑总集.md) | 踩过的所有坑 —— 81 条，现象 / 原因 / 解决 / 教训 |
-| [10-原理与排查方法.md](10-原理与排查方法.md) | 系统是怎么跑起来的 + 排查方法论 + 按现象排错的索引 |
+| [08-踩坑总集.md](08-踩坑总集.md) | 踩过的所有坑 —— **105 条**，现象 / 原因 / 解决 / 教训 |
+| [09-实习目标与岗位要求.md](09-实习目标与岗位要求.md) | 岗位要求 + 适配分析 + **方向讨论结论**（时间线 / 实习策略 / 控制 vs 算法）|
+| [10-原理与排查方法.md](10-原理与排查方法.md) | 系统是怎么跑起来的 + 排查方法论 + **§1.9 一页纸全景** + **§5.8 七层排查阶梯** |
 | [11-URDF与Xacro速查.md](11-URDF与Xacro速查.md) | 写机器人模型时照着做 —— URDF/xacro 骨架形状 + 怎么查没见过的插件 |
+| [12-日志.md](12-日志.md) | 按天记录"发生过什么"，重要日子有单独详解 |
 | [代码备份/](代码备份/) | 节点骨架模板、launch 模板、第一个节点的原版 |
 
 **遇到问题该翻哪份**：写代码 → `05`；敲命令 → `06`；**写机器人模型 → `11`**；报错了 → `08`；"说不清为什么" → `10`。
@@ -33,21 +36,21 @@
 
 ## 代码放在哪
 
-在虚拟机内部的工作空间 `~/ros2_ws`，目前有三个包：
+在虚拟机内部的工作空间 `~/ros2_ws`，目前有三个包（外加一个工具目录 `tools/`，放地图与验证脚本）：
 
 | 包 | 类型 | 内容 |
 |---|---|---|
-| `my_turtle` | `ament_python` | 13 个练习节点，学习过程都记在这里 |
+| `my_turtle` | `ament_python` | **14 个**练习节点（含 Nav2 的 `cmd_vel_relay`）|
 | `my_interfaces` | `ament_cmake` | 自定义接口，msg / srv / action 三件套齐全 |
-| `my_robot_description` | `ament_cmake` | 机器人模型与仿真资产（URDF、桥接配置、世界文件、launch）|
+| `my_robot` | `ament_cmake` | 机器人模型与仿真资产（URDF、桥接配置、世界文件、launch、**Nav2 参数**）|
 
 第三个包是仿真那部分。**一条命令就能起一整套**（Gazebo + 机器人 + 数据桥）：
 
 ```bash
-ros2 launch my_robot_description gazebo.launch.py
+ros2 launch my_robot gazebo.launch.py
 ```
 
-> 节点一览表（13 个程序各干什么、怎么测）与完整目录树 → [04-学习进度存档.md](04-学习进度存档.md) 第四节。
+> 节点一览表（14 个程序各干什么、怎么测）与完整目录树 → [04-学习进度存档.md](04-学习进度存档.md) 第四节。
 
 ---
 
@@ -57,7 +60,7 @@ ros2 launch my_robot_description gazebo.launch.py
 hostname -I                                                 # ① 看虚拟机 IP（NAT 会变）
 cd ~/ros2_ws && colcon build && source install/setup.bash    # ② 编译 + 加载工作空间
 ros2 run turtlesim turtlesim_node                            # ③ 跑乌龟（另开终端跑自己的节点）
-ros2 launch my_robot_description gazebo.launch.py            # ④ 起仿真：Gazebo + 车 + 桥
+ros2 launch my_robot gazebo.launch.py            # ④ 起仿真：Gazebo + 车 + 桥
 ```
 
 编译命令怎么选、自己的节点怎么跑 → [06-ROS2命令速查.md](06-ROS2命令速查.md) 第二部分。
