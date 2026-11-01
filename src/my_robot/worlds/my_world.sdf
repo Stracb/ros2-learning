@@ -86,5 +86,38 @@
       </link>
     </model>
 
+    <model name="marker_a">
+      <static>true</static>
+      <pose>-2.6 -1.55 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.4 0.7 1.0</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.4 0.7 1.0</size></box></geometry>
+          <material><ambient>0.9 0.6 0.1 1</ambient><diffuse>0.9 0.6 0.1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="marker_b">
+      <static>true</static>
+      <pose>0.2 1.4 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.25 1.0 1.0</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.25 1.0 1.0</size></box></geometry>
+          <material><ambient>0.1 0.7 0.9 1</ambient><diffuse>0.1 0.7 0.9 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="marker_c">
+      <static>true</static>
+      <pose>3.0 0.2 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="c"><geometry><box><size>0.3 0.3 1.0</size></box></geometry></collision>
+        <visual name="v"><geometry><box><size>0.3 0.3 1.0</size></box></geometry>
+          <material><ambient>0.8 0.2 0.8 1</ambient><diffuse>0.8 0.2 0.8 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
   </world>
 </sdf>
