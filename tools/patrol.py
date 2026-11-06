@@ -1,3 +1,4 @@
+import math
 import time
 import rclpy
 from rclpy.node import Node
@@ -20,6 +21,8 @@ class Patrol(Node):
         self.get_logger().info('等 navigate_to_pose ...')
         self.cli.wait_for_server()
         self.rec = 0
+        self.px = None
+        self.py = None
 
     def fb(self, msg):
         self.rec = msg.feedback.number_of_recoveries
@@ -29,7 +32,13 @@ class Patrol(Node):
         g.pose.header.frame_id = 'map'
         g.pose.pose.position.x = float(x)
         g.pose.pose.position.y = float(y)
-        g.pose.pose.orientation.w = 1.0
+        if self.px is None:
+            g.pose.pose.orientation.w = 1.0
+        else:
+            yaw = math.atan2(y - self.py, x - self.px)
+            g.pose.pose.orientation.z = math.sin(yaw / 2.0)
+            g.pose.pose.orientation.w = math.cos(yaw / 2.0)
+        self.px, self.py = x, y
         self.rec = 0
         t0 = time.time()
         f = self.cli.send_goal_async(g, feedback_callback=self.fb)
