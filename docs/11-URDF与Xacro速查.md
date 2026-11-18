@@ -14,10 +14,20 @@
 > | **说不清的现象** | `10-原理与排查方法.md` |
 > | **URDF / xacro 怎么写** | **本篇（唯一权威）** |
 >
+> **URDF 和 SRDF 不是一回事**（这两行要先分清）：
+>
+> | 文件 | 是什么 | 谁要它 |
+> |---|---|---|
+> | **URDF** | **机器人的样子** —— link / joint / 几何 / 惯量 | **所有系统都要**（RViz、Gazebo、`ros2_control`、MoveIt）|
+> | **SRDF** | **给 MoveIt 的说明书** —— 分组、自碰撞豁免、末端执行器、`virtual_joint` | **只有 MoveIt 要**；**不进 URDF**，也不影响仿真 |
+>
+> 两者的分工与"四个约定"见 `08-踩坑总集.md` 坑 116（第 54 天）。
+>
 > 建立于第 28 天（2026-10-16）—— 把原先散在 `05` 形状 21 / 22 与阶段四、阶段五里的
 > URDF 知识汇总到一处。**它对应的学习阶段：`02-学习路线.md` 阶段四（URDF/Xacro 建模）/
 > 阶段五（Gazebo 仿真）；当前进度看 `04-学习进度存档.md` 第一节。**
-> **最后更新**：2026-10-30（第 40 天）
+> **最后更新**：**2026-11-17（第 55 天）** —— 第 50–55 天补了段 11 的模型知识
+> （mimic / limit 余量 / bullet-featherstone / `/clock`）
 
 
 ---
@@ -40,34 +50,45 @@
 | **怎么把模型挂进 Gazebo** | **第二部分 · 形状 7** |
 | **URDF 里的 Gazebo 插件与传感器** | **第二部分 · 形状 8** |
 | **世界文件（`.sdf`）怎么放进包** | **第二部分 · 形状 9** |
+| **`mimic` 从关节（夹爪那种）怎么写** | **第二部分 · 形状 10** |
+| **`<ros2_control>` 怎么接进 URDF** | **第二部分 · 形状 11** |
 | **最容易搞错的四个点** | **第三部分** |
 | ⭐ **遇到没见过的插件 / 传感器，怎么查怎么写** | **第四部分** |
 | **写完模型怎么验证（5 步）** | **第五部分** |
 | **现象不对 / 报错了** | **第六部分** → `08` |
 
-### 第二部分「形状 1–9」一览
+### 第二部分「形状 1–11」一览
 
 > **忘了怎么写，就按编号直接跳到那一节。** 编号是固定的，新增小节不占编号。
 
 | # | 形状 | 一句话 |
 |---|---|---|
 | **1** | 一个 `link`（三块齐全） | `visual` + `collision` + `inertial` |
-| **2** | `continuous` 关节（轮子） | 无限转，**只要 `origin` + `axis`** |
+| **2** | `continuous` 关节（轮子） | 无限转，**但 `<limit effort velocity>` 也要写** |
 | **3** | `fixed` 关节（传感器） | 焊死，**只有 `origin`，没有 `axis`** |
-| **4** | `revolute` 关节（有限角度） | 和 `continuous` 一样，**但必须写 `<limit>`** |
+| **4** | `revolute` 关节（有限角度） | 必须写 `<limit>`，而且**两端都要留余量**（贴边 = 控制器永久失效）|
 | **5** | `<xacro:property>` | 变量：`name` + `value`，用的时候写 `${名字}` |
 | **6** | `<xacro:macro>` 定义 + 调用 | 模板：**定义一次，带参数生成多份** |
 | **7** | 把模型挂进 Gazebo | `<gazebo reference="link名">` + 摩擦 / 颜色 |
 | **8** | URDF 里的 Gazebo **插件与传感器** | `<sensor type="gpu_lidar">` + 三个 `gz-sim-*-system` 插件 + `<gz_frame_id>` |
 | **9** | **世界文件放进包** | `worlds/xxx.sdf` + CMake `install(DIRECTORY ...)` + `get_package_share_directory` |
+| **10** | **`mimic` 从关节** | 一个命令带两个手指 —— **只读不写** + 换 `bullet-featherstone` + `limit` 留余量 |
+| **11** | **`<ros2_control>` 接入** | `<hardware><plugin>` + `<gazebo>` 插件 + `<parameters>` 路径（⚠️ 草案）|
+
+> **形状 2 的一句话要说准**：`continuous` **也要写 `<limit effort velocity>`** ——
+> RViz 不看，**但 Gazebo / `ros2_control` 缺了它，关节拿不到力矩上限**（形状 2 关键点 1 / 6）。
 
 > **命令怎么敲一律看 `06-ROS2命令速查.md`**（本篇只写"文件怎么写"）——
 > 编译 `06 §2.5`、Gazebo / `gz` 命令 `06 §3.12`。
 >
-> **本工程的实际文件**：`~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro`
+> **本工程的实际文件**：`~/ros2_ws/src/my_robot/urdf/my_robot.urdf.xacro`
 > —— **7 link / 6 joint，10 个 property，2 个宏（`wheel` / `caster`）**，
 > 差速驱动 + `gpu_lidar`（目录树见 `04` 第四节）。
 > **下面骨架里的 `${...}` 名字以那份文件为准** —— 本篇给的是"形状"，不是逐字原文。
+>
+> ⚠️ **包名第 31 天改过**：`my_robot_description` → **`my_robot`**
+> —— 原因见 `08` 坑 82：**`<parameters>` 的路径里不能出现 `robot_description`**。
+> 见到的旧笔记里若还写 `my_robot_description`，一律按 `my_robot` 读。
 
 ---
 
@@ -172,6 +193,7 @@
   <child  link="left_wheel_link"/>      <!-- 子：挂上去的是谁 -->
   <origin xyz="${x_offset} ${wheel_separation / 2} ${wheel_offset_z}" rpy="0 0 0"/>
   <axis xyz="0 1 0"/>                   <!-- ★ 转轴：绕【自己的 y 轴】转 = 左右方向 -->
+  <limit effort="20" velocity="20"/>    <!-- ★ continuous 也要写：Gazebo / ros2_control 靠它拿上限 -->
 </joint>
 ```
 
@@ -179,12 +201,18 @@
 
 | # | 关键点 | 说明 |
 |---|---|---|
-| 1 | **`continuous` = 无限转** | 轮子就该用它 —— **不需要 `<limit>`** |
+| 1 | **`continuous` = 无限转，但 `<limit effort velocity>` 必须写** | RViz 不看这个；**Gazebo / `ros2_control` 缺了它，关节拿不到力矩上限 —— 轮子和夹爪都推不动** |
 | 2 | **`origin` 写在【父】坐标系里** | 位置是"相对 `base_link`"的 → **见第三部分第 1 条** |
 | 3 | **`axis` 写在【子】坐标系里** | 而且是"**被 `rpy` 转过之后**的子坐标系" → 同上 |
 | 4 | **轮子的轴是 `0 1 0`（y 轴）** | 车轮是"侧着滚"的：**绕左右方向转**，不是绕竖直方向 |
 | 5 | **可动关节靠 `/joint_states` 才有 TF** | 没有 `/joint_states` → RViz 报 `No transform from [wheel_left] to [base_link]`（**坑 70**）|
-| 6 | **进 Gazebo 可能要补 `<limit effort velocity>`** | 第 18 天 `continuous` 关节**没写 `<limit>`**（RViz 不在意）—— `04` 第一节标了"进 Gazebo 可能要补"，**以实际文件为准** |
+| 6 | **进 Gazebo 必须补 `<limit effort velocity>`** | 第 18 天 `continuous` 关节**没写 `<limit>`**（RViz 不在意）。旧引用「`04` 第一节」**已作废**（`04` 已重构，顶部三节不再编号）；现在的出处是 **`08` 坑 115**（`limit` 的完整教训）+ **`12` 第 50 天**（Gazebo 版 Panda 三控制器接管）|
+
+> ⚠️ **草案：待用虚拟机里的实际文件核对后转正**
+> —— **"`continuous` 缺 `<limit>` → Gazebo / `ros2_control` 里推不动"这条后果**，
+> 手上只有 `08` 坑 115（`limit` 贴边 / 没留余量 → 夹爪怎么推都只动 0.0027）与第 50 天的接管经验，
+> **还没在虚拟机上"故意删掉轮子的 `<limit>`"单独复现**；`effort="20" velocity="20"` 也**不是**本机文件里的原值。
+
 
 > **轮子在 RViz 里不跟着转 / 报 `No transform` → `08-踩坑总集.md` 坑 70。**
 > **Gazebo 里轮子要转起来，还要有 `gz-sim-joint-state-publisher-system` 插件**（形状 8 ③）。
@@ -208,6 +236,25 @@
 | 3 | ⚠️ **子 link 会被【合并】进父 link** | Gazebo 转 SDF 时把 fixed 子 link 并进父 link → **见第三部分第 3 条**（这就是坑 73 的根）|
 | 4 | **所以传感器的帧名要显式写 `<gz_frame_id>`** | 别指望它自动跟着 URDF 的 link 名走（**形状 8 关键点 2**）|
 
+### 变体：机械臂进 Gazebo 要加一个 `world` 固定根
+
+**`fixed` 的另一个用途：把一个"根 link"焊到 Gazebo 的世界上。**
+（下面四行照抄 `08` 坑 115「完整配置（可直接抄）」的开头）
+
+```xml
+<link name="world"/>                      <!-- Gazebo 的固定根 -->
+<joint name="world_to_panda" type="fixed">
+  <parent link="world"/><child link="panda_link0"/>
+</joint>
+```
+
+| # | 关键点 | 说明 |
+|---|---|---|
+| 1 | **不加 → 底座瘫倒** | 机械臂没有轮子、不靠摩擦站住，**必须焊死**。第 50 天的原话：**"底座没固定会瘫倒"**（`12` 第 50 天、`08` 坑 115）|
+| 2 | **`world` 是 Gazebo 的固定根** | 它**不是**你机器人的 link —— **`robot_state_publisher` 不发这一帧**，RViz 里看不到 `world`。别拿它当 TF 父帧 |
+| 3 | **车（差速驱动）不需要它** | 车靠轮子落地，根还是 `base_link`；**只有"要焊在地上"的模型才加** |
+
+
 ## 形状 4：一个 `revolute` 关节（有限角度的关节）
 
 ```xml
@@ -216,7 +263,7 @@
   <child  link="arm_link"/>
   <origin xyz="0 0 0.2" rpy="0 0 0"/>
   <axis xyz="0 0 1"/>
-  <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>   <!-- ★ 必须有 -->
+  <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>   <!-- ★ 必须有；两端都要留余量（关键点 5）-->
 </joint>
 ```
 
@@ -228,6 +275,8 @@
 | 2 | **`lower` / `upper` 是弧度** | `-1.57` ≈ `-90°`，`1.57` ≈ `+90°` |
 | 3 | **`effort` = 最大力矩，`velocity` = 最大角速度** | Gazebo 里"能不能转得动"看这两个 |
 | 4 | **五种关节类型** | `fixed` / `revolute`（有限转）/ `continuous`（无限转）/ `prismatic`（平移）/ `floating`（自由）—— `02` 阶段四「学习内容」第 2 条 |
+| 5 | **`lower` / `upper` 两端都要离开初始位置留余量** | **初始位置正好落在边界 = 控制器永久失效** —— 夹爪写 `lower="0.0"` 踩过：出生就站在下限上，被重力/碰撞推过界 0.0001，之后**怎么推都只动 0.0027**（`08` 坑 115 条件 3）。本机改法是两端都往外让一点：`<limit effort="20" lower="-0.01" upper="0.045" velocity="0.2"/>` |
+
 
 ## 形状 5：一个 `<xacro:property>`（变量）
 
@@ -283,7 +332,7 @@
 |---|---|---|
 | 1 | **`params` 用【空格】分隔** | 不是逗号（**CMake 列表也是空格**，见 `05` 形状 18）；**参数名以实际文件为准** |
 | 2 | **宏 = 模板，可以带参数重复生成** | **定义一次 → 生成左右两个轮子**（第 17 天"复制的代价"就是被这个解决的）|
-| 3 | **本工程的两个宏：`wheel`（驱动轮）/ `caster`（万向轮）** | `wheel` 用 `continuous`，`caster` 用 `fixed`（`04` 第一节）|
+| 3 | **本工程的两个宏：`wheel`（驱动轮）/ `caster`（万向轮）** | `wheel` 用 `continuous`，`caster` 用 `fixed`（写法见形状 2 / 形状 3）|
 | 4 | **展开后才是真 URDF** | `xacro xxx.urdf.xacro > /tmp/a.urdf` —— **想看宏到底生成了什么，就看这个产物** |
 | 5 | **改宏 = 改所有调用处** | 这是好处也是风险：**改之前先想清楚"两个轮子要不要一起变"** |
 
@@ -318,19 +367,25 @@
 > **原先住在 `05` 形状 21**（第 28 天搬到本篇，`05` 只留指针）。
 > **写在 `.urdf.xacro` 里**（文件本身还是 URDF，只是多了 `<gazebo>` 块）。
 > 一共四块：**一个传感器 + 三个 `gz-sim-*-system` 插件**。
+> **另有一块 `/clock` 桥接不在 URDF 里**，是 launch 的事（形状 9 ⑥）—— **漏了它控制器就在用墙钟跑**。
 
 ```xml
 <!-- ① 传感器：挂在某个 link 上（用 <gazebo reference="link名"> 包住）-->
 <gazebo reference="base_link">
   <sensor name="laser" type="gpu_lidar">        <!-- ★ GPU 传感器 -->
     <gz_frame_id>laser_link</gz_frame_id>       <!-- ★ 坑 73：强制指定 frame_id -->
-    <pose>0 0 0.5 0 0 0</pose>                  <!-- 相对【所在 link】；本机实测 = 0.5 -->
+    <pose>0 0 ${laser_z} 0 0 0</pose>            <!-- 相对【所在 link】；本机 ${laser_z} = 0.12（见本节末尾的隐患）-->
     <topic>scan</topic>                         <!-- bridge 按这个名字认它 -->
     <update_rate>10</update_rate>
-    <ray>
+    <lidar>                                     <!-- ★ Harmonic 是 <lidar>，<ray> 是 Classic 的写法 -->
       <scan><horizontal><samples>360</samples></horizontal></scan>
       <range><min>0.1</min><max>20.0</max></range>
-    </ray>
+      <noise>                                   <!-- 必须在这一层，见关键点 7 -->
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.01</stddev>
+      </noise>
+    </lidar>
   </sensor>
 </gazebo>
 
@@ -371,19 +426,23 @@
 | 1 | **`filename` vs `name`** | `filename` = **插件库名**（`gz-sim-*-system`）；`name` = **类名**（`gz::sim::systems::Xxx`）。**两个都要写**，别混 |
 | 2 | **`<gz_frame_id>`** | 不写 → `frame_id` 是 Gazebo 的**完整限定名**（如 `my_robot/base_link/laser`），RViz 认不出 → **加这一行**（坑 73）|
 | 3 | **`<render_engine>ogre2</render_engine>`** | **GPU 传感器靠"渲染"看世界** —— 引擎是 `ogre` 就全返回 `range_min`（坑 72 / 76）|
-| 4 | **`<sensor>` 只能写一处** | **同时**写进【世界文件】和【URDF】→ 段错误崩溃（坑 77）|
+| 4 | **`Sensors` 插件只能写一处** | 留在 URDF、删世界文件里的那个 —— **同时写两处 → 段错误崩溃**（坑 77）。注意：**这不是说 `<sensor>` 只能写一处** —— **`<sensor>` 写两处不会崩，只是世界里多一台传感器** |
 | 5 | **GPU 传感器在虚拟机里要软渲染兜底** | 用 `gpu_lidar` / 相机前先 `export LIBGL_ALWAYS_SOFTWARE=1`，否则**一半扫描是空的、2 米内固定盲区**（**坑 81**）|
 | 6 | **换成别的传感器只改两处** | 改 `type`（`gpu_lidar` / `camera` / `imu`…）+ 换插件块 —— **怎么查写法见第四部分** |
-| 7 | **噪声写在 `<lidar>` 里面** | **`<sensor>` → `<lidar>` → `<noise>`**。写在 `<sensor>` 下会被 SDF **静默丢弃**，只留一条警告（**坑 94**）。`<mean>0.0</mean>` + `<stddev>0.01</stddev>`（= 1 厘米）|
+| 7 | **噪声写在 `<lidar>` 里面** | **`<sensor>` → `<lidar>` → `<noise>`**。写在 `<sensor>` 下会被 SDF **静默丢弃**，只留一条警告（**坑 94**）。`<mean>0.0</mean>` + `<stddev>0.01</stddev>`（= 1 厘米）。⚠️ **这一层的名字是 `<lidar>`** —— `<ray>` 是 Gazebo Classic 的写法，Harmonic 的 `gpu_lidar` 不认它 |
 
 ### 坑：**固定关节会被合并进父 link**
 
 `laser_link` 是用 **`fixed` 关节**接到 `base_link` 上的 ——
-**Gazebo 转 SDF 时会把 fixed 子 link "合并"进父 link**，所以：
+**Gazebo 转 SDF 时会把 fixed 子 link "合并"进父 link**。所以帧名 / 归属对不上有**两条并列原因**，别只记住一条：
 
-- **传感器实际归属 `base_link`** —— 这就是坑 73 里 `frame_id` 变成
-  `my_robot/base_link/laser` 的原因（**不是 `laser_link`**）。
-- **`<gazebo reference="laser_link">` 上的东西不一定会按你想象生效**（那个 link 已经不存在了）。
+| # | 原因 | 表现 |
+|---|---|---|
+| **①** | **不写 `<gz_frame_id>`** | `frame_id` 就是 **Gazebo 的限定名 `<模型>/<link>/<传感器名>`**（如 `my_robot/base_link/laser`）—— RViz 认不出这个名字 |
+| **②** | **传感器写在 `fixed` 子 link 上** | 那个子 link 被合并后，**这段限定名里的 link 会变成父 link 名**（写在 `laser_link` 上，出来是 `base_link/laser`）|
+
+- **`<gazebo reference="laser_link">` 上的东西不一定会按你想象生效**（那个 link 可能已经不存在了）。
+- **怎么确认 link 还在不在**：**`gz sdf -p` 看转换产物**（第五部分第 2 步）—— 名字没了就是被合并了，**别假设它还在**。
 - **结论**：**帧名字一律用 `<gz_frame_id>` 显式指定**，别指望它自动跟着 URDF 的 link 名走。
 
 ### 噪声：`<noise>` 的位置和写法（第 32 天）
@@ -426,17 +485,22 @@ gz model -m <模型名> -l | grep -A10 "Noise"
 
 **本机的 URDF 当时是这样写的**：
 
-| 项 | 值 |
+| 项 | 值（第 32 天修**之前**）|
 |---|---|
 | **传感器挂在哪** | `<gazebo reference="base_link">` |
 | **`<pose>`** | **`0 0 0.5 0 0 0`** → **实际在车体原点上方 0.5 米** |
 | **`<gz_frame_id>`** | **`laser_link`** |
 | **而 `laser_link` 的关节位置** | **`z = 0.12`**（第 27 天用 `tf2_echo odom laser_link` 实测过）|
 
+> **这张表里有两件事，别混成一件**（两条并列原因，见前面「固定关节会被合并进父 link」那一节）：
+> ① **`<gz_frame_id>` 写什么，`frame_id` 就是什么** —— 这里写了 `laser_link`，所以 TF 用的是这个名字；
+> ② **`laser_link` 这个 link 在 SDF 里已经被合并进 `base_link`** —— **用 `gz sdf -p` 确认它还在不在**，
+> 别假设这个名字背后一定站着一个真实的 link。
+
 > ## **⟹ TF 说"雷达在 0.12 米高处"，而它实际在 0.5 米高处 —— 差了 0.38 米。**
 
-> ## **✅ 第 32 天已修**：`<pose>` 改成 **`0 0 ${base_height/2 + laser_height/2} 0 0 0`** ——
-> ## **两处用【同一个 xacro 表达式】算出来，不再各写各的数字**（写死数字 = 迟早对不上）。
+> ## **✅ 第 32 天已修**：`<pose>` 改成 **`0 0 ${laser_z} 0 0 0`** ——
+> ## **两处用【同一个 property】算出来，不再各写各的数字**（写死数字 = 迟早对不上）。
 
 **后果**：
 - **RViz 里激光点云的位置会整体偏高**（看不出来，但量一下就不对）
@@ -446,24 +510,28 @@ gz model -m <模型名> -l | grep -A10 "Noise"
 
 | 方案 | 改哪里 |
 |---|---|
-| **A** | **把 `<pose>` 改成 `0 0 0.12 0 0 0`** —— 让传感器真的待在 `laser_link` 那个位置 |
-| **B** | **把 `laser_link` 的关节 `z` 改成 `0.5`** —— 让 `laser_link` 跟着传感器走 |
+| **A** | **把 `<pose>` 改成 `0 0 ${laser_z} 0 0 0`** —— 让传感器真的待在 `laser_link` 那个位置 |
+| **B** | **把 `laser_link` 的关节 `z` 也改成 `<pose>` 里那个值** —— 让 `laser_link` 跟着传感器走 |
 
 > **这不是"必须马上改"的 bug** —— **它不影响"车能跑、雷达有数据"** ✅
 > **但它是个【真错误】**：等到建图时才发现，会表现为**墙的位置整体平移**，极难查。
 >
-> **本机选的是 A 的变体**：不是写死 `0.12`，而是让两处**都从同一组 xacro 参数算**：
+> **本机选的是 A**：不写死两处数字，而是**定义一次、两处都引用** ——
+> **只留一种算法**（以前这里同时存在 `0.12` 和 `0.16` 两种算法，第 55 天统一成一个 property）：
 
 ```xml
-<xacro:property name="base_height" value="0.2"/>
-<xacro:property name="laser_height" value="0.12"/>
-<!-- 传感器 -->
-<pose>0 0 ${base_height/2 + laser_height/2} 0 0 0</pose>
+<xacro:property name="laser_z" value="0.12"/>   <!-- 第 27 天 tf2_echo odom laser_link 实测的那个值 -->
+<!-- 传感器（挂在 base_link 上）-->
+<pose>0 0 ${laser_z} 0 0 0</pose>
 <!-- laser_link 的关节 -->
-<origin xyz="0 0 ${base_height/2 + laser_height/2}" rpy="0 0 0"/>
+<origin xyz="0 0 ${laser_z}" rpy="0 0 0"/>
 ```
 
-> ## **⟹ 判据：两处数字要么【同一个表达式】，要么【根本不写数字】。** ✅
+> **要抬就一起抬**：如果确实想把雷达升到 **0.16**（几何来源 = 车体半高 `0.1` + 雷达半高 `0.06`），
+> **只改 `${laser_z}` 这一个值**，两处自动同步 —— **绝不允许一处 `0.12`、一处 `0.16`**。
+> 这也是唯一允许的"第二种算法"：**换个 property 的值，不是换个公式**。
+
+> ## **⟹ 判据：两处数字要么【同一个 property】，要么【根本不写数字】。** ✅
 
 > **完整因果链见 `08-踩坑总集.md` 坑 72 / 73 / 77。**
 > **"改了没生效 / 数据不对"的现象排查见 `10-原理与排查方法.md` §4.4（坐标系 / TF）与 §4.5（模型行为）。**
@@ -477,8 +545,11 @@ gz model -m <模型名> -l | grep -A10 "Noise"
 **① 文件放哪**：
 
 ```
-~/ros2_ws/src/my_robot_description/worlds/my_world.sdf
+~/ros2_ws/src/my_robot/worlds/my_world.sdf
 ```
+
+> ⚠️ 包名第 31 天从 `my_robot_description` 改成了 **`my_robot`** ——
+> 原因见 `08` 坑 82（`<parameters>` 路径里不能出现 `robot_description`）。
 
 **② `CMakeLists.txt` 里把它装上**（和 `config`/`launch`/`urdf` 同一句）：
 
@@ -499,7 +570,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
-    pkg_share = get_package_share_directory('my_robot_description')
+    pkg_share = get_package_share_directory('my_robot')             # 第 31 天改名，见 08 坑 82
     world_file = os.path.join(pkg_share, 'worlds', 'my_world.sdf')   # ← 算出来的路径
 
     return LaunchDescription([
@@ -527,6 +598,53 @@ def generate_launch_description():
 > **`--render-engine`（不带后缀）是【全局】的，会把 GUI 和服务器一起改掉** ——
 > 要么频闪、要么传感器瞎。**必须用 `-gui` / `-server` 两个分开写。**
 
+**⑤ 有 `mimic` 的模型必须换【物理引擎】= `bullet-featherstone`**
+
+> **为什么**：**DART 不支持 mimic → 从关节速度直接 `NaN`，一动不动**
+> （`12` 第 51 天原话；`08` 坑 115 条件 2）。**换引擎不是优化，是前提。**
+
+**写法一：`gz sim` 命令行**（抄自 `08` 坑 115「完整配置（可直接抄）」）：
+
+```bash
+gz sim -r empty.sdf --physics-engine gz-physics-bullet-featherstone-plugin
+```
+
+**写法二：launch 的 `gz_args` 里**（把同一串参数交给 `gz sim`）：
+
+```python
+'gz_args': '--physics-engine gz-physics-bullet-featherstone-plugin -r ' + world_file
+```
+
+> ⚠️ **草案：待用虚拟机里的实际文件核对后转正** ——
+> `gz_args` 这一种是**从命令行写法推出来的**（`ros_gz_sim` 把 `gz_args` 原样交给 `gz sim`），
+> **本机还没在 launch 里跑通过**；`panda_gazebo.launch.py` 里实际是 `cmd=['gz','sim',...]` 还是 `gz_args`，
+> 以那份文件为准。
+
+**⑥ `/clock` 必须 bridge —— 否则控制器在用墙钟跑**
+
+> **摘要照抄 `08` 坑 114**：`gz sim` **不直接发 ROS 话题**（它走 gz-transport），
+> **凡 ROS 侧要用的 gz 数据（`/clock`、传感器、`/tf`）都必须显式 bridge，没有"自动转发"。**
+
+```python
+Node(
+    package='ros_gz_bridge',
+    executable='parameter_bridge',
+    arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+    output='screen'
+),
+```
+
+| 要点 | 说明 |
+|---|---|
+| **方向符号** | `[` = gz → ROS，`]` = ROS → gz，`@` = 双向（`08` 坑 114 原文）|
+| **漏了会怎样** | 一直刷 `[controller_manager]: No clock received, using time argument instead!` —— 控制器照样 `active`、机器人照样能动，**只是所有轨迹时间都错** |
+| **怎么验** | `ros2 topic list \| grep -i clock` 有没有 `/clock`；`ros2 topic hz /clock` 有没有频率 |
+| **`use_sim_time` 谁要设** | **控制器和自写节点都要设**；**`gz_ros2_control` 的 `use_sim_time` 要写在插件的 `<ros>` 块里**（第 50 天踩过，`12` 第 50 天）|
+
+> ⚠️ **草案：待用虚拟机里的实际文件核对后转正** ——
+> **`<ros>` 块里到底放 `<parameters>` 还是 `<param>`**，本机没落成文档（`08` 坑 82 只留下"`<parameters>` 的值不能含 `robot_description`"这一条）。
+> 骨架见**形状 11**，那里整段都标了草案。
+
 ### 两个容易忘的前提
 
 - **障碍物 / 地图要写进世界文件本身** —— **运行中 `ros_gz_sim create` 放的模型，GPU 传感器看不见**（坑 79）。
@@ -534,6 +652,94 @@ def generate_launch_description():
 
 > **完整因果链见 `08-踩坑总集.md` 坑 78 / 79 / 76。**
 > **"世界文件怎么起、怎么验证"的命令见 `06-ROS2命令速查.md` §3.12。**
+
+## 形状 10：一个 `mimic` 从关节（夹爪那种"一个命令带两个手指"）
+
+> **出处**：`08` 坑 115（第 50–52 天，`12` 日志第 50–52 天）—— 下面四条件是**那次调通的配方**，照抄。
+> **一句话原则**：**mimic 关节跟着主关节动 → 对它【只读不写】。**
+
+```xml
+<!-- 从关节：保留 <mimic> + 给 limit 留余量（这两块照抄 08 坑 115）-->
+<joint name="panda_finger_joint2" type="prismatic">
+  <mimic joint="panda_finger_joint1"/>                                <!-- ① 保留 -->
+  <limit effort="20" lower="-0.01" upper="0.045" velocity="0.2"/>     <!-- ④ 留余量 -->
+</joint>
+```
+
+> `parent` / `child` / `axis` 按你的模型填（见形状 4）；**命令接口那边在形状 11 里**。
+
+### 四个条件，缺一不可
+
+| # | 条件 | 不满足会怎样 |
+|---|---|---|
+| **①** | **保留 `<mimic joint="主关节"/>`**，不删 | 删掉 + 两个都给 command → 控制器能起，但**主关节 `joint1` 反而 `NaN`**（`08` 坑 115 的 ③）|
+| **②** | **从关节只给 `state_interface`，控制器只列主关节** | 给从关节 `command_interface` → `Activated mimic joints cannot have command interfaces`，**三个控制器全 `unconfigured`** |
+| **③** | **`--physics-engine` 换 `bullet-featherstone`** | **DART 不支持 mimic → 从关节速度 `NaN`，一动不动**（`08` 坑 115 条件 2、`12` 第 51 天）|
+| **④** | **`limit` 两端都留余量** | `lower` 正好等于初始位置 → **越界 0.0001 就永久失效，怎么推都只动 0.0027**（`08` 坑 115 条件 3、形状 4 关键点 5）|
+
+### 四条弯路（症状对照，遇到好认）
+
+| # | 当时怎么配的 | 表现 |
+|---|---|---|
+| ① | mimic + 从关节**给 command** | 三控制器全 `unconfigured` |
+| ② | mimic + 从关节**只 state**，**DART 引擎** | 控制器 active，手指速度 **`NaN`**、不动 |
+| ③ | **删 mimic** + 两关节都给 command | 控制器 active，**主关节还是 `NaN`**（从关节动了）|
+| ④ | 官方 `<param name="mimic">` 写法 | **控制器起不来** —— 这版二进制和官方文档不一致 |
+
+> **顺带一个现象**：为了推动夹爪把 `position_proportional_gain` 调到 10 → **手臂跟着抖** ——
+> 这个增益是**全局**的，本质是"弹簧硬度"：**拉得动蚂蚁的力，会把大象弹飞**（`08` 坑 115）。
+> **`limit` 修好之后小增益也能推**，不需要大增益。
+
+## 形状 11：`<ros2_control>` 怎么接进 URDF
+
+> ⚠️ **草案：待用虚拟机里 `my_robot` 的实际文件核对后转正**
+> —— 第 30–31 天写通过一次，但**成品没贴进任何文档**。下面只写**三处位置 + 两条硬规则**，
+> **不是逐字原文**；`filename` / 类名的确切写法尤其要核对。
+
+**三处位置（错一处就全盘不生效）**：
+
+| # | 位置 | 写什么 | 错了会怎样 |
+|---|---|---|---|
+| **①** | `<ros2_control>` → `<hardware>` → `<plugin>` | 硬件插件类名（Gazebo 里是 `gz_ros2_control` 那一支）| 控制器找不到硬件 → 全部 `unconfigured` |
+| **②** | `<gazebo>` 里的 `<plugin>` | `filename` = 插件库名、`name` = 类名；**`use_sim_time` 写在它的 `<ros>` 块里** | 插件不加载；或控制器用墙钟（坑 114）|
+| **③** | `<parameters>` 的路径 | 指向控制器 yaml | **路径里出现 `robot_description` → 所有控制器加载失败**（坑 82）|
+
+**骨架（⚠️ 草案，别当原文抄）**：
+
+```xml
+<ros2_control name="MyRobotSystem" type="system">
+  <hardware>
+    <plugin>gz_ros2_control/GazeboSimSystem</plugin>     <!-- ⚠️ 写法待核对 -->
+  </hardware>
+
+  <joint name="left_wheel_joint">
+    <command_interface name="velocity"/>
+    <state_interface name="position"/>
+    <state_interface name="velocity"/>
+  </joint>
+  <!-- 每个受控关节一段；mimic 从关节【只给 state】（形状 10）-->
+</ros2_control>
+
+<gazebo>
+  <plugin filename="gz_ros2_control-system" name="...">   <!-- ⚠️ 两处名字待核对 -->
+    <parameters>$(find my_robot)/config/ros2_control.yaml</parameters>
+    <ros>                                                  <!-- use_sim_time 在这一层 -->
+      <parameters>$(find my_robot)/config/ros2_control.yaml</parameters>
+    </ros>
+  </plugin>
+</gazebo>
+```
+
+**两条硬规则**（这两条是**已知的**，不是草案）：
+
+| # | 规则 | 依据 |
+|---|---|---|
+| **1** | **`<parameters>` 的路径里不能出现 `robot_description`**（子串匹配，跟长度无关）| `08` 坑 82。报错伪装成 `spawner` 的 `Failed loading controller`，真错误是 `Couldn't parse params file: '--params-file -p'`。**这就是第 31 天把包名改成 `my_robot` 的原因** |
+| **2** | **mimic 关节不能有 `command_interface`** | `08` 坑 115。报 `Activated mimic joints cannot have command interfaces` |
+
+> **`<ros2_control>` 块在 `gz sdf -p` 的输出里【看不到】是正常的** —— 它是 URDF 扩展标签，
+> **`gz_ros2_control` 直接读 URDF，不经过 SDF**（第四部分末尾也提了一句）。
+> **控制器 yaml 里只列主关节**（形状 10 条件 ②）。
 
 ---
 
@@ -626,7 +832,7 @@ def generate_launch_description():
 | # | 要点 |
 |---|---|
 | 1 | **本机自带几百个官方示例世界**（`.../gz-sim8/worlds/`），**每个传感器、每个插件都有完整可运行写法** —— **这是最实用的"字典"** |
-| 2 | **示例是 SDF、你的模型是 URDF** —— **但 `<sensor>` 和 `<plugin>` 这两块可以原样搬进去**（形状 8 就是这么来的）|
+| 2 | **示例是 SDF、你的模型是 URDF** —— **`<sensor>` 可搬（`<lidar>` 那层要一起搬）**；**`<plugin>` 只搬 model 级 system 插件**（diff-drive / sensors / joint-state-publisher），**世界级插件**（physics / scene-broadcaster / user-commands）**留在 `.sdf` 里**，搬进 URDF 无效甚至崩 |
 | 3 | **另外两个去处**：**官方文档 `gazebosim.org/docs`**（按任务组织，如 "Sensors" 一节）、**`gz sim --help`**（命令行本身也是说明书）|
 | 4 | ⭐ **加插件前先问**："**这个功能是不是有现成的 system 插件？**" —— **有就抄，不要自己写** |
 
@@ -641,7 +847,7 @@ cat /opt/ros/jazzy/opt/gz_sim_vendor/share/gz/gz-sim8/worlds/gpu_lidar_sensor.sd
 
 # ③ 你自己的模型到底被转换成了什么（★ 最有用的一条）
 #    ⚠️ 先展开！gz sdf 不认 .xacro
-xacro ~/ros2_ws/src/my_robot_description/urdf/my_robot.urdf.xacro > /tmp/my_robot.urdf
+xacro ~/ros2_ws/src/my_robot/urdf/my_robot.urdf.xacro > /tmp/my_robot.urdf    # 包名第 31 天改过（08 坑 82）
 gz sdf -p /tmp/my_robot.urdf
 ```
 
@@ -734,7 +940,7 @@ gz sim --render-engine-gui ogre --render-engine-server ogre2 $WORLDS/gpu_lidar_s
 | **5** | `gz model --list` | **Gazebo 里到底有没有这台车**（★ 验证事实的硬手段）|
 
 > **仿真命令怎么敲**（起 Gazebo / 桥接 / `create` / `gz` 系列）→ `06-ROS2命令速查.md` §3.12。
-> **`view_frames` 怎么读**（`rate: 10000` + `most_recent_transform: 0` = 静态变换）→ `04` 第一节第 25 天成果。
+> **`view_frames` 怎么读**（`rate: 10000` + `most_recent_transform: 0` = 静态变换）→ `04` 顶部「更早的归档」第 25 天。
 > **每次实验前先清残留进程** → `06 §3.12` 末尾 + `08` 坑 80。
 
 > ⚠️ **改了 URDF 之后，"上一次的结果"还在原地**：
@@ -745,7 +951,7 @@ gz sim --render-engine-gui ogre --render-engine-server ogre2 $WORLDS/gpu_lidar_s
 
 # 第六部分：常见坑 → 指针
 
-> **只列 URDF / 模型相关的** —— **每条坑的完整记录（现象 → 原因 → 解决 → 教训）在 `08-踩坑总集.md`。**
+> **只列 URDF / 模型 / 控制器接入相关的** —— **每条坑的完整记录（现象 → 原因 → 解决 → 教训）在 `08-踩坑总集.md`。**
 
 | 现象 | 坑号 |
 |---|---|
@@ -757,6 +963,10 @@ gz sim --render-engine-gui ogre --render-engine-server ogre2 $WORLDS/gpu_lidar_s
 | 重启后 `Unable to find or download file`（世界文件放在 `/tmp` 或包外）| `08` **坑 78** |
 | `create` 在运行中放进去的**障碍物，雷达看不见** | `08` **坑 79** |
 | 噪声加了却**没效果**（数据仍完美平滑、`Standard deviation` 是 0）| `08` **坑 94**（`<noise>` 要写进 `<lidar>`）|
+| **所有控制器都加载失败**，`spawner` 只说 `Failed loading controller`，真错误是 `--params-file -p` | `08` **坑 82**（`<parameters>` 路径里不能有 `robot_description`）|
+| 控制器一直刷 `No clock received, using time argument instead!` | `08` **坑 114**（`/clock` 没桥接）|
+| **mimic 夹爪动不了** / 从关节速度 `NaN` / 控制器起不来 | `08` **坑 115**（四条件：只给 state、`bullet-featherstone`、`limit` 留余量、保留 mimic）|
+| 自己配 MoveIt2 卡在"约定"上（SRDF 的 `parent_group`、`planning_pipelines` 类型…）| `08` **坑 116**（URDF 是样子，SRDF 是给 MoveIt 的说明书）|
 
 > **一个能扩展到使用层的补充**：`gpu_lidar` 在虚拟机上半瞎（坑 81）——
 > **`export LIBGL_ALWAYS_SOFTWARE=1` 是跑传感器实验前的固定动作。**
